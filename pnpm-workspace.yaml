@@ -1,2 +1,7 @@
+# pnpm 10 reads onlyBuiltDependencies; pnpm 11+ reads allowBuilds (unlisted build scripts fail install).
 onlyBuiltDependencies:
   - supabase
+allowBuilds:
+  supabase: true
+  sharp: false
+  unrs-resolver: false
