@@ -14,6 +14,14 @@ const cursorSchema = z.object({
   d: z.enum(["asc", "desc"]),
 });
 
+/** Cursor pointing at `row` under the given sort. */
+export function cursorFor(
+  row: Record<SortColumn, number>,
+  sort: { column: SortColumn; dir: SortDir },
+): Cursor {
+  return { v: row[sort.column], id: row.id, s: sort.column, d: sort.dir };
+}
+
 // btoa/atob instead of Buffer: this module is also bundled for the browser.
 export function encodeCursor(c: Cursor): string {
   return btoa(JSON.stringify({ v: c.v, id: c.id, s: c.s, d: c.d }))
