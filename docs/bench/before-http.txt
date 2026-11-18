@@ -1,0 +1,7 @@
+page1_id               median 0.004630 s
+page1_caffeine_desc    median 0.042150 s
+keyset_deep_age        median 0.029281 s
+offset_deep_age        median 0.207736 s
+filter_country_age     median 0.040215 s
+rare_severe            median 0.006571 s
+estimated count header: Content-Range: */13001

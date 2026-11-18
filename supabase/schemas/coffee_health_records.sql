@@ -51,3 +51,19 @@ create policy "Public read access"
   for select
   to anon, authenticated
   using (true);
+
+-- Sort/keyset indexes: one (col, id) btree per sortable column (SORT_COLUMNS in
+-- domain/coffee-records/options.ts). Each serves ORDER BY col, id LIMIT n in
+-- both directions, the keyset seek past (v, id), and range filters on col.
+-- Plans and timings: docs/bench/ and NOTES.md.
+create index coffee_health_records_age_id_idx on public.coffee_health_records (age, id);
+create index coffee_health_records_coffee_intake_id_idx on public.coffee_health_records (coffee_intake, id);
+create index coffee_health_records_caffeine_mg_id_idx on public.coffee_health_records (caffeine_mg, id);
+create index coffee_health_records_sleep_hours_id_idx on public.coffee_health_records (sleep_hours, id);
+create index coffee_health_records_bmi_id_idx on public.coffee_health_records (bmi, id);
+create index coffee_health_records_heart_rate_id_idx on public.coffee_health_records (heart_rate, id);
+
+-- Partial index for the one rare category (0.17% of rows): "Severe" filters and
+-- selective counts go from a full scan to a ~1.7k-entry index. A (country, age, id)
+-- index was measured and dropped: unused for sorting, ~10 ms gain on rare counts only.
+create index coffee_health_records_severe_idx on public.coffee_health_records (id) where health_issues = 'Severe';

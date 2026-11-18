@@ -1,0 +1,161 @@
+== Q1 default page 1: order by id
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.037..0.041 rows=26 loops=1)
+   Buffers: shared hit=2 read=2
+   ->  Index Scan using coffee_health_records_pkey on coffee_health_records (actual time=0.035..0.038 rows=26 loops=1)
+         Buffers: shared hit=2 read=2
+ Planning:
+   Buffers: shared hit=119 read=5
+ Planning Time: 0.432 ms
+ Execution Time: 0.124 ms
+(8 rows)
+
+== Q2 sort caffeine_mg desc, page 1
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Limit (actual time=53.971..59.834 rows=26 loops=1)
+   Buffers: shared hit=13611
+   ->  Gather Merge (actual time=53.970..59.830 rows=26 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=13611
+         ->  Sort (actual time=50.651..50.653 rows=21 loops=3)
+               Sort Key: caffeine_mg DESC, id DESC
+               Sort Method: top-N heapsort  Memory: 30kB
+               Buffers: shared hit=13611
+               Worker 0:  Sort Method: top-N heapsort  Memory: 29kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 30kB
+               ->  Parallel Seq Scan on coffee_health_records (actual time=0.008..17.683 rows=333333 loops=3)
+                     Buffers: shared hit=13525
+ Planning:
+   Buffers: shared hit=14
+ Planning Time: 0.064 ms
+ Execution Time: 59.875 ms
+(18 rows)
+
+== Q3 keyset deep: sort age asc, cursor (60, 500000)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Limit (actual time=19.640..23.853 rows=26 loops=1)
+   Buffers: shared hit=13611
+   ->  Gather Merge (actual time=19.638..23.850 rows=26 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=13611
+         ->  Sort (actual time=16.870..16.871 rows=22 loops=3)
+               Sort Key: age, id
+               Sort Method: top-N heapsort  Memory: 30kB
+               Buffers: shared hit=13611
+               Worker 0:  Sort Method: top-N heapsort  Memory: 30kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 31kB
+               ->  Parallel Seq Scan on coffee_health_records (actual time=0.014..16.422 rows=5861 loops=3)
+                     Filter: ((age >= 60) AND ((age > 60) OR ((age = 60) AND (id > 500000))))
+                     Rows Removed by Filter: 327472
+                     Buffers: shared hit=13525
+ Planning:
+   Buffers: shared hit=15
+ Planning Time: 0.139 ms
+ Execution Time: 23.889 ms
+(20 rows)
+
+== Q4 offset deep: sort age asc, page 20000
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Limit (actual time=260.438..269.519 rows=26 loops=1)
+   Buffers: shared hit=13611, temp read=5758 written=10867
+   ->  Gather Merge (actual time=171.560..256.604 rows=500001 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=13611, temp read=5758 written=10867
+         ->  Sort (actual time=164.426..178.442 rows=166975 loops=3)
+               Sort Key: age, id
+               Sort Method: external merge  Disk: 28592kB
+               Buffers: shared hit=13611, temp read=5758 written=10867
+               Worker 0:  Sort Method: external merge  Disk: 29448kB
+               Worker 1:  Sort Method: external merge  Disk: 28592kB
+               ->  Parallel Seq Scan on coffee_health_records (actual time=0.004..16.487 rows=333333 loops=3)
+                     Buffers: shared hit=13525
+ Planning Time: 0.091 ms
+ Execution Time: 272.740 ms
+(16 rows)
+
+== Q5 filter + sort: country in (Spain, France), age 20-40, sort age
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Limit (actual time=31.647..36.463 rows=26 loops=1)
+   Buffers: shared hit=13611
+   ->  Gather Merge (actual time=31.645..36.458 rows=26 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=13611
+         ->  Sort (actual time=28.715..28.716 rows=26 loops=3)
+               Sort Key: age, id
+               Sort Method: top-N heapsort  Memory: 30kB
+               Buffers: shared hit=13611
+               Worker 0:  Sort Method: top-N heapsort  Memory: 30kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 30kB
+               ->  Parallel Seq Scan on coffee_health_records (actual time=0.012..27.643 rows=19955 loops=3)
+                     Filter: ((country = ANY ('{Spain,France}'::text[])) AND (age >= 20) AND (age <= 40))
+                     Rows Removed by Filter: 313378
+                     Buffers: shared hit=13525
+ Planning:
+   Buffers: shared hit=65
+ Planning Time: 0.266 ms
+ Execution Time: 36.490 ms
+(20 rows)
+
+== Q6 rare category: health_issues = Severe, sort id
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.096..1.986 rows=26 loops=1)
+   Buffers: shared hit=215 read=41
+   ->  Index Scan using coffee_health_records_pkey on coffee_health_records (actual time=0.095..1.983 rows=26 loops=1)
+         Filter: (health_issues = 'Severe'::health_issue)
+         Rows Removed by Filter: 15011
+         Buffers: shared hit=215 read=41
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.085 ms
+ Execution Time: 2.003 ms
+(10 rows)
+
+== Q7 capped count (PostgREST estimated mode) for 3 filters
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Aggregate (actual time=4.406..4.407 rows=1 loops=1)
+   Buffers: shared hit=716
+   ->  Limit (actual time=0.011..4.365 rows=1001 loops=1)
+         Buffers: shared hit=716
+         ->  Seq Scan on coffee_health_records (actual time=0.010..4.310 rows=1001 loops=1)
+               Filter: ((NOT smoking) AND (country = 'Spain'::text) AND (gender = 'Female'::gender))
+               Rows Removed by Filter: 51833
+               Buffers: shared hit=716
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.054 ms
+ Execution Time: 4.480 ms
+(12 rows)
+
+== Q8 selective capped count: Severe + Japan
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Aggregate (actual time=68.990..68.991 rows=1 loops=1)
+   Buffers: shared hit=13525
+   ->  Limit (actual time=0.069..68.956 rows=200 loops=1)
+         Buffers: shared hit=13525
+         ->  Seq Scan on coffee_health_records (actual time=0.069..68.928 rows=200 loops=1)
+               Filter: ((country = 'Japan'::text) AND (health_issues = 'Severe'::health_issue))
+               Rows Removed by Filter: 999800
+               Buffers: shared hit=13525
+ Planning Time: 0.038 ms
+ Execution Time: 69.012 ms
+(10 rows)
+
+== Q9 planner estimate for correlated filters (sleep_quality Poor + stress High)
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Seq Scan on coffee_health_records  (cost=0.00..28525.00 rows=250000 width=67)
+   Filter: ((sleep_quality = 'Poor'::sleep_quality) AND (stress_level = 'High'::stress_level))
+(2 rows)
+

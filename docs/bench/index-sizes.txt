@@ -1,0 +1,17 @@
+                indexrelname                | pg_size_pretty 
+--------------------------------------------+----------------
+ coffee_health_records_age_id_idx           | 21 MB
+ coffee_health_records_bmi_id_idx           | 30 MB
+ coffee_health_records_caffeine_mg_id_idx   | 30 MB
+ coffee_health_records_coffee_intake_id_idx | 30 MB
+ coffee_health_records_heart_rate_id_idx    | 21 MB
+ coffee_health_records_pkey                 | 21 MB
+ coffee_health_records_severe_idx           | 56 kB
+ coffee_health_records_sleep_hours_id_idx   | 30 MB
+(8 rows)
+
+  heap  
+--------
+ 106 MB
+(1 row)
+
