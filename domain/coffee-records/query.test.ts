@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { encodeCursor } from "./cursor.ts";
 import {
   type ListQuery,
+  MAX_PAGE,
   parseListQuery,
   toSearchParams,
   withQueryChange,
@@ -200,5 +201,11 @@ describe("integer range columns", () => {
       min: 0,
       max: 130,
     });
+  });
+});
+
+describe("page bound", () => {
+  it("caps absurd page numbers so the offset stays sane", () => {
+    expect(parseListQuery({ page: "900719925474099" }).page).toBe(MAX_PAGE);
   });
 });

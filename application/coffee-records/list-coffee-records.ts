@@ -57,7 +57,9 @@ export async function listCoffeeRecords(
 
   // The count may be a planner estimate; what we just saw beats it.
   const onLastPage = found && !hasNext;
-  const total = onLastPage ? (page - 1) * PAGE_SIZE + rows.length : count;
+  const seen = (page - 1) * PAGE_SIZE + rows.length;
+  // Never report fewer records than are already on or before this page.
+  const total = onLastPage ? seen : found ? Math.max(count, seen + 1) : count;
   const estimatedPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const totalPages = hasNext
     ? Math.max(estimatedPages, page + 1)

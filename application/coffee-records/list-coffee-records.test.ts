@@ -154,3 +154,12 @@ describe("listCoffeeRecords", () => {
     expect(calls.count).toEqual([q.filters, q.filters]);
   });
 });
+
+describe("listCoffeeRecords total", () => {
+  it("never reports fewer records than the rows already reached", async () => {
+    const { repo } = fakeRepo(data, { count: 30, exact: false });
+    const p2 = await listCoffeeRecords(repo, { ...byAge, page: 2 });
+    // Rows 26–50 are on screen and more exist: the total must exceed 50.
+    expect(p2.total).toBeGreaterThan(50);
+  });
+});

@@ -95,9 +95,12 @@ function parseBoolean(raw: string | undefined): boolean | undefined {
   return raw === "true" ? true : raw === "false" ? false : undefined;
 }
 
+// Bounds the OFFSET a crafted URL can request (25M rows); deeper pages are reachable via Next.
+export const MAX_PAGE = 1_000_000;
+
 function parsePage(raw: string | undefined): number {
   const n = Number(raw);
-  return Number.isSafeInteger(n) && n >= 1 ? n : 1;
+  return Number.isSafeInteger(n) && n >= 1 ? Math.min(n, MAX_PAGE) : 1;
 }
 
 /** URL search params → typed query. Never throws: bad values fall back to defaults. */
