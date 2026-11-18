@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SORT_COLUMNS, type SortColumn, type SortDir } from "./options.ts";
+import { coffeeRecordSchema } from "./record.ts";
 
 /**
  * Keyset position: sort value and id of a boundary row, plus the sort it was
@@ -7,19 +8,19 @@ import { SORT_COLUMNS, type SortColumn, type SortDir } from "./options.ts";
  */
 export type Cursor = { v: number; id: number; s: SortColumn; d: SortDir };
 
-// Columns stored as integer/smallint: a decimal cursor value would be a Postgres cast error.
-const INTEGER_SORT_COLUMNS = new Set<SortColumn>(["id", "age", "heart_rate"]);
-const PG_INT_MAX = 2_147_483_647;
-
-// Tokens come back from the URL, so bound them to what the columns can hold.
+// Tokens come back from the URL, so the sort value must be one its column can
+// hold (the record schema mirrors the column types and CHECK constraints);
+// otherwise Postgres rejects the literal and the page would error.
 const cursorSchema = z
   .object({
-    v: z.number().min(-1e6).max(1e6),
-    id: z.number().int().min(1).max(PG_INT_MAX),
+    v: z.number(),
+    id: coffeeRecordSchema.shape.id,
     s: z.enum(SORT_COLUMNS),
     d: z.enum(["asc", "desc"]),
   })
-  .refine((c) => !INTEGER_SORT_COLUMNS.has(c.s) || Number.isInteger(c.v));
+  .refine((c) => coffeeRecordSchema.shape[c.s].safeParse(c.v).success)
+  // Sorting by id, the sort value *is* the id; disagreeing halves are forged.
+  .refine((c) => c.s !== "id" || c.v === c.id);
 
 /** Cursor pointing at `row` under the given sort. */
 export function cursorFor(

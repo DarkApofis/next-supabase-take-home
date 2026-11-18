@@ -11,7 +11,7 @@ import {
 // Bounds mirror the column types (numeric precision) and CHECK constraints in
 // supabase/schemas/coffee_health_records.sql.
 export const coffeeRecordSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.number().int().positive().max(2_147_483_647), // Postgres integer
   age: z.number().int().min(0).max(130),
   gender: z.enum(GENDERS),
   country: z.enum(COUNTRIES),

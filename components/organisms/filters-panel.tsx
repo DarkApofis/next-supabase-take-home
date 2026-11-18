@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { BooleanFilter } from "@/components/molecules/boolean-filter";
 import { MultiSelectFilter } from "@/components/molecules/multi-select-filter";
 import { RangeFilter } from "@/components/molecules/range-filter";
@@ -44,8 +44,16 @@ export function FiltersPanel({ query }: { query: ListQuery }) {
     setFilters(query.filters);
   }
 
+  // Debounced inputs call `update` from timers created during an older render,
+  // so read the newest pending filters from a ref rather than the closure.
+  const latest = useRef(filters);
+  useEffect(() => {
+    latest.current = filters;
+  }, [filters]);
+
   const update = (patch: Partial<Filters>) => {
-    const next = { ...filters, ...patch };
+    const next = { ...latest.current, ...patch };
+    latest.current = next;
     setFilters(next);
     startTransition(() => {
       router.push(recordsHref(withQueryChange(query, { filters: next })), { scroll: false });

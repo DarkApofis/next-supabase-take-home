@@ -60,7 +60,7 @@ All of it runs in Postgres. The client only ever receives 26 rows.
 - **Sort whitelist:** `id, age, coffee_intake, caffeine_mg, sleep_hours, bmi, heart_rate`. Every sortable column has a `(col, id)` index. `id` is always the tiebreaker, so the order is total.
 - **Option lists:** come from `domain/coffee-records/options.ts`, the same values the enums and CHECK use. There is no `SELECT DISTINCT`, and no query or cache is needed for them.
 - **Pagination is a hybrid**, the choice made during design:
-  - **Prev/Next use keyset pagination.** The cursor is base64url JSON `{v, id, sort, dir}` from the boundary row.
+  - **Prev/Next use keyset pagination.** The cursor is base64url JSON `{v, id, s, d}` (sort value, id, sort column, direction) from the boundary row, validated against the column's own bounds on the way back in.
     - PostgREST has no row comparison, so `(col, id) > (v, id₀)` is written as `col >= v AND (col > v OR (col = v AND id > id₀))`. The redundant `>=` gives the index a starting point.
     - Prev runs the comparison reversed and then flips the rows back into display order.
   - **Numbered links use OFFSET.** They show first, last and current ±2, labelled `≈N` while the total is an estimate.

@@ -37,6 +37,13 @@ export function RangeFilter({ id, label, value, step, onChange, debounceMs = 400
     }
   }
 
+  // Latest-callback: the timer outlives the render that created it, so it must
+  // call the newest onChange (which closes over the newest sort/filters).
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const schedule = (nextMin: string, nextMax: string) => {
@@ -44,7 +51,7 @@ export function RangeFilter({ id, label, value, step, onChange, debounceMs = 400
     timer.current = setTimeout(() => {
       const range = { min: read(nextMin), max: read(nextMax) };
       setSent(range);
-      onChange(range);
+      onChangeRef.current(range);
     }, debounceMs);
   };
 

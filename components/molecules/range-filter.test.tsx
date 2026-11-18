@@ -44,3 +44,22 @@ describe("RangeFilter", () => {
     expect(container.querySelector<HTMLInputElement>("#age-min")!.value).toBe("");
   });
 });
+
+describe("RangeFilter callback freshness", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("calls the onChange from the latest render, not the one captured at the keystroke", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { container, rerender } = mount(
+      <RangeFilter id="age" label="Age" step={1} value={{}} onChange={first} />,
+    );
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    change(container.querySelector<HTMLInputElement>("#age-min")!, "30");
+    // e.g. the user re-sorted while the debounce was pending
+    rerender(<RangeFilter id="age" label="Age" step={1} value={{}} onChange={second} />);
+    act(() => vi.advanceTimersByTime(400));
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith({ min: 30, max: undefined });
+  });
+});

@@ -44,3 +44,20 @@ describe("cursor value validation", () => {
     });
   });
 });
+
+describe("cursor value fits its column", () => {
+  it.each([
+    ["age beyond smallint/CHECK range", b64('{"v":100000,"id":1,"s":"age","d":"asc"}')],
+    ["heart_rate beyond CHECK range", b64('{"v":300,"id":1,"s":"heart_rate","d":"asc"}')],
+    ["coffee_intake beyond numeric(3,1)", b64('{"v":1000,"id":1,"s":"coffee_intake","d":"asc"}')],
+    ["negative caffeine", b64('{"v":-5,"id":1,"s":"caffeine_mg","d":"asc"}')],
+  ])("rejects %s", (_label, token) => {
+    expect(decodeCursor(token)).toBeNull();
+  });
+});
+
+describe("id-sorted cursor", () => {
+  it("rejects a token whose sort value disagrees with its id", () => {
+    expect(decodeCursor(b64('{"v":5,"id":900000,"s":"id","d":"asc"}'))).toBeNull();
+  });
+});
