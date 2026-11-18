@@ -1,0 +1,150 @@
+== Q1 default page 1: order by id
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.028..0.033 rows=26 loops=1)
+   Buffers: shared hit=4
+   ->  Index Scan using coffee_health_records_pkey on coffee_health_records (actual time=0.027..0.030 rows=26 loops=1)
+         Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=269
+ Planning Time: 0.700 ms
+ Execution Time: 0.122 ms
+(8 rows)
+
+== Q2 sort caffeine_mg desc, page 1
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.040..0.120 rows=26 loops=1)
+   Buffers: shared hit=29
+   ->  Index Scan Backward using coffee_health_records_caffeine_mg_id_idx on coffee_health_records (actual time=0.039..0.117 rows=26 loops=1)
+         Buffers: shared hit=29
+ Planning:
+   Buffers: shared hit=8
+ Planning Time: 0.056 ms
+ Execution Time: 0.132 ms
+(8 rows)
+
+== Q3 keyset deep: sort age asc, cursor (60, 500000)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=2.458..2.502 rows=26 loops=1)
+   Buffers: shared hit=1548
+   ->  Index Scan using coffee_health_records_age_id_idx on coffee_health_records (actual time=2.457..2.500 rows=26 loops=1)
+         Index Cond: (age >= 60)
+         Filter: ((age > 60) OR ((age = 60) AND (id > 500000)))
+         Rows Removed by Filter: 1738
+         Buffers: shared hit=1548
+ Planning:
+   Buffers: shared hit=40
+ Planning Time: 0.217 ms
+ Execution Time: 2.518 ms
+(11 rows)
+
+== Q4 offset deep: sort age asc, page 20000
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=175.277..175.288 rows=26 loops=1)
+   Buffers: shared hit=201527
+   ->  Index Scan using coffee_health_records_age_id_idx on coffee_health_records (actual time=0.008..162.550 rows=500001 loops=1)
+         Buffers: shared hit=201527
+ Planning Time: 0.044 ms
+ Execution Time: 175.319 ms
+(6 rows)
+
+== Q5 filter + sort: country in (Spain, France), age 20-40, sort age
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.035..0.209 rows=26 loops=1)
+   Buffers: shared hit=152
+   ->  Index Scan using coffee_health_records_age_id_idx on coffee_health_records (actual time=0.034..0.206 rows=26 loops=1)
+         Index Cond: ((age >= 20) AND (age <= 40))
+         Filter: (country = ANY ('{Spain,France}'::text[]))
+         Rows Removed by Filter: 280
+         Buffers: shared hit=152
+ Planning:
+   Buffers: shared hit=73
+ Planning Time: 0.264 ms
+ Execution Time: 0.228 ms
+(11 rows)
+
+== Q6 rare category: health_issues = Severe, sort id
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.008..0.027 rows=26 loops=1)
+   Buffers: shared hit=28
+   ->  Index Scan using coffee_health_records_severe_idx on coffee_health_records (actual time=0.007..0.024 rows=26 loops=1)
+         Buffers: shared hit=28
+ Planning:
+   Buffers: shared hit=30
+ Planning Time: 0.114 ms
+ Execution Time: 0.038 ms
+(8 rows)
+
+== Q7 capped count (PostgREST estimated mode) for 3 filters
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Aggregate (actual time=5.022..5.023 rows=1 loops=1)
+   Buffers: shared hit=721
+   ->  Limit (actual time=0.014..4.973 rows=1001 loops=1)
+         Buffers: shared hit=721
+         ->  Seq Scan on coffee_health_records (actual time=0.013..4.908 rows=1001 loops=1)
+               Filter: ((NOT smoking) AND (country = 'Spain'::text) AND (gender = 'Female'::gender))
+               Rows Removed by Filter: 52197
+               Buffers: shared hit=721
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.068 ms
+ Execution Time: 5.049 ms
+(12 rows)
+
+== Q8 selective capped count: Severe + Japan
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=1.350..1.350 rows=1 loops=1)
+   Buffers: shared hit=1706
+   ->  Limit (actual time=0.012..1.338 rows=200 loops=1)
+         Buffers: shared hit=1706
+         ->  Index Scan using coffee_health_records_severe_idx on coffee_health_records (actual time=0.011..1.324 rows=200 loops=1)
+               Filter: (country = ANY ('{Japan}'::text[]))
+               Rows Removed by Filter: 1500
+               Buffers: shared hit=1706
+ Planning Time: 0.075 ms
+ Execution Time: 1.366 ms
+(10 rows)
+
+== Q9 planner estimate for correlated filters (sleep_quality Poor + stress High)
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Seq Scan on coffee_health_records  (cost=0.00..28525.00 rows=250000 width=67)
+   Filter: ((sleep_quality = 'Poor'::sleep_quality) AND (stress_level = 'High'::stress_level))
+(2 rows)
+
+== Q10 selective capped count without a usable index (Moderate+Severe, Japan)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=31.535..31.537 rows=1 loops=1)
+   Buffers: shared hit=5190
+   ->  Limit (actual time=0.113..31.478 rows=1001 loops=1)
+         Buffers: shared hit=5190
+         ->  Seq Scan on coffee_health_records (actual time=0.113..31.415 rows=1001 loops=1)
+               Filter: ((country = ANY ('{Japan}'::text[])) AND (health_issues = ANY ('{Moderate,Severe}'::health_issue[])))
+               Rows Removed by Filter: 382645
+               Buffers: shared hit=5190
+ Planning Time: 0.053 ms
+ Execution Time: 31.558 ms
+(10 rows)
+
+== Q11 keyset as a true row comparison (what an RPC could send; PostgREST cannot)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.012..0.035 rows=26 loops=1)
+   Buffers: shared hit=28
+   ->  Index Scan using coffee_health_records_age_id_idx on coffee_health_records (actual time=0.011..0.033 rows=26 loops=1)
+         Index Cond: (ROW(age, id) > ROW(60, 500000))
+         Buffers: shared hit=28
+ Planning:
+   Buffers: shared hit=4
+ Planning Time: 0.133 ms
+ Execution Time: 0.066 ms
+(9 rows)
+

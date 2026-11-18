@@ -25,8 +25,8 @@ export async function createClient() {
             );
           } catch {
             // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have proxy refreshing
-            // user sessions.
+            // Safe to ignore: this app has no auth, so there is no
+            // session cookie to refresh.
           }
         },
       },
