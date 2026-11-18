@@ -159,6 +159,29 @@ During review, we will assume you understand your submission and can explain you
 
 ---
 
+## Submission
+
+Design notes, index rationale with EXPLAIN plans, and scale trade-offs are in **[NOTES.md](NOTES.md)**.
+
+```bash
+pnpm install
+pnpm setup:env            # starts local Supabase, writes .env.local
+pnpx supabase db reset    # migrations + generated seed (10,000 rows)
+pnpm dev                  # http://localhost:3000 → /records
+```
+
+| Check | Command |
+| --- | --- |
+| Lint, unit tests, build | `pnpm lint && pnpm test:run && pnpm build` |
+| Row count = 10,000, filtered queries, keyset paging, read-only RLS (needs local Supabase) | `pnpm test:int` |
+| Regenerate the seed from the CSV | `pnpm seed:generate` |
+| Regenerate DB types | `pnpm db:types` |
+| 1M-row benchmark (local only; undo with `pnpx supabase db reset`) | `bash scripts/bench/run.sh seed && bash scripts/bench/run.sh explain && bash scripts/bench/run.sh http` |
+
+**Windows:** if `supabase start` fails with `bind: ... 54322`, Hyper-V has reserved the port range (`netsh interface ipv4 show excludedportrange protocol=tcp`). Restart WinNAT from an admin terminal: `net stop winnat && net start winnat`.
+
+---
+
 ## Configuración (Español)
 
 ### Requisitos del sistema
