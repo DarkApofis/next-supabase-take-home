@@ -1,0 +1,33 @@
+import { z } from "zod";
+import { SORT_COLUMNS, type SortColumn, type SortDir } from "./options.ts";
+
+/**
+ * Keyset position: sort value and id of a boundary row, plus the sort it was
+ * minted under so a cursor can't be replayed against a different ordering.
+ */
+export type Cursor = { v: number; id: number; s: SortColumn; d: SortDir };
+
+const cursorSchema = z.object({
+  v: z.number(),
+  id: z.number().int(),
+  s: z.enum(SORT_COLUMNS),
+  d: z.enum(["asc", "desc"]),
+});
+
+// btoa/atob instead of Buffer: this module is also bundled for the browser.
+export function encodeCursor(c: Cursor): string {
+  return btoa(JSON.stringify({ v: c.v, id: c.id, s: c.s, d: c.d }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+export function decodeCursor(s: string): Cursor | null {
+  try {
+    const json = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+    const parsed = cursorSchema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
