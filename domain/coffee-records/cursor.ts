@@ -7,12 +7,19 @@ import { SORT_COLUMNS, type SortColumn, type SortDir } from "./options.ts";
  */
 export type Cursor = { v: number; id: number; s: SortColumn; d: SortDir };
 
-const cursorSchema = z.object({
-  v: z.number(),
-  id: z.number().int(),
-  s: z.enum(SORT_COLUMNS),
-  d: z.enum(["asc", "desc"]),
-});
+// Columns stored as integer/smallint: a decimal cursor value would be a Postgres cast error.
+const INTEGER_SORT_COLUMNS = new Set<SortColumn>(["id", "age", "heart_rate"]);
+const PG_INT_MAX = 2_147_483_647;
+
+// Tokens come back from the URL, so bound them to what the columns can hold.
+const cursorSchema = z
+  .object({
+    v: z.number().min(-1e6).max(1e6),
+    id: z.number().int().min(1).max(PG_INT_MAX),
+    s: z.enum(SORT_COLUMNS),
+    d: z.enum(["asc", "desc"]),
+  })
+  .refine((c) => !INTEGER_SORT_COLUMNS.has(c.s) || Number.isInteger(c.v));
 
 /** Cursor pointing at `row` under the given sort. */
 export function cursorFor(

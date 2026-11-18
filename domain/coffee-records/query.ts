@@ -71,10 +71,20 @@ function parseNumber(raw: string | undefined): number | undefined {
   return raw !== undefined && DECIMAL.test(raw) ? Number(raw) : undefined;
 }
 
+// smallint columns: bounds are rounded inwards and clamped to the CHECK range,
+// so the database never receives a decimal or out-of-range literal.
+const INTEGER_RANGES: Partial<Record<RangeFilterKey, [number, number]>> = { age: [0, 130] };
+
 function parseRange(sp: RawSearchParams, key: RangeFilterKey): Range {
   let min = parseNumber(first(sp[`${key}_min`]));
   let max = parseNumber(first(sp[`${key}_max`]));
   if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
+  const limits = INTEGER_RANGES[key];
+  if (limits) {
+    const clamp = (n: number) => Math.min(limits[1], Math.max(limits[0], n));
+    if (min !== undefined) min = clamp(Math.ceil(min));
+    if (max !== undefined) max = clamp(Math.floor(max));
+  }
   return {
     ...(min !== undefined && { min }),
     ...(max !== undefined && { max }),

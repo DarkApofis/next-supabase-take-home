@@ -24,3 +24,23 @@ describe("cursor", () => {
     expect(decodeCursor(token)).toBeNull();
   });
 });
+
+describe("cursor value validation", () => {
+  it.each([
+    ["decimal value on an integer column", b64('{"v":40.5,"id":1,"s":"age","d":"asc"}')],
+    ["id beyond integer range", b64('{"v":1,"id":10000000000,"s":"id","d":"asc"}')],
+    ["non-positive id", b64('{"v":1,"id":0,"s":"id","d":"asc"}')],
+    ["absurd sort value", b64('{"v":1e300,"id":1,"s":"bmi","d":"asc"}')],
+  ])("rejects %s", (_label, token) => {
+    expect(decodeCursor(token)).toBeNull();
+  });
+
+  it("accepts a decimal value on a numeric column", () => {
+    expect(decodeCursor(b64('{"v":22.1,"id":5,"s":"bmi","d":"desc"}'))).toEqual({
+      v: 22.1,
+      id: 5,
+      s: "bmi",
+      d: "desc",
+    });
+  });
+});

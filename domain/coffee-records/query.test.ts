@@ -186,3 +186,19 @@ describe("withQueryChange", () => {
     expect(next).toMatchObject({ page: 1, sort: { column: "age", dir: "desc" } });
   });
 });
+
+describe("integer range columns", () => {
+  it("rounds age bounds inwards so smallint never sees a decimal", () => {
+    expect(parseListQuery({ age_min: "20.5", age_max: "40.5" }).filters.age).toEqual({
+      min: 21,
+      max: 40,
+    });
+  });
+
+  it("clamps age bounds to the column's CHECK range", () => {
+    expect(parseListQuery({ age_min: "-5", age_max: "99999" }).filters.age).toEqual({
+      min: 0,
+      max: 130,
+    });
+  });
+});
