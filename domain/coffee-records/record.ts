@@ -8,7 +8,8 @@ import {
   STRESS_LEVELS,
 } from "./options.ts";
 
-// Bounds mirror the CHECK constraints in supabase/schemas/coffee_health_records.sql.
+// Bounds mirror the column types (numeric precision) and CHECK constraints in
+// supabase/schemas/coffee_health_records.sql.
 export const coffeeRecordSchema = z.object({
   id: z.number().int().positive(),
   age: z.number().int().min(0).max(130),
